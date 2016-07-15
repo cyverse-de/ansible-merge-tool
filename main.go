@@ -1,7 +1,6 @@
 package main
 
 import (
-	"copy"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -11,9 +10,10 @@ import (
 	"path"
 	"path/filepath"
 
-	"git"
-
+	"github.com/cyverse-de/copy"
 	"github.com/mitchellh/go-homedir"
+
+	"github.com/cyverse-de/git"
 )
 
 var (
