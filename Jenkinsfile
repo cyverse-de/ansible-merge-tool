@@ -1,3 +1,4 @@
+#!groovy
 def repo = "ansible-merge-tool"
 def dockerUser = "discoenv"
 
