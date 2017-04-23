@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/cyverse-de/copy"
 	"github.com/mitchellh/go-homedir"
@@ -41,51 +42,25 @@ func init() {
 
 // MoveAnsible moves the ansible subdirectory to the external directory
 func MoveAnsible(dePath, externalPath string) error {
-	fmt.Printf("Moving DE/ansible to %s", external)
+	fmt.Printf("Moving DE/ansible to %s\n", external)
 	return os.Rename(path.Join(dePath, *deAnsibleDir), externalPath)
 }
 
 // CopyGroupVars copies the group vars from internalPath to externalPath.
 func CopyGroupVars(internalPath, externalPath string) error {
-	internalGroupVars := path.Join(internalPath, "group_vars")
-	externalGroupVars := path.Join(externalPath, "group_vars")
+	internalGroupVars := path.Join(internalPath, "inventories", "_group_vars", "all")
+	externalGroupVars := path.Join(externalPath, "inventories", "group_vars", "all")
+	if !strings.HasSuffix(internalGroupVars, "/") {
+		internalGroupVars = fmt.Sprintf("%s/", internalGroupVars)
+	}
+	if !strings.HasSuffix(externalGroupVars, "/") {
+		externalGroupVars = fmt.Sprintf("%s/", externalGroupVars)
+	}
 	fmt.Printf("Copying files from %s to %s\n", internalGroupVars, externalGroupVars)
-	var copyPaths []string
-
-	visit := func(p string, i os.FileInfo, err error) error {
-		if !i.IsDir() {
-			fmt.Printf("Found file %s to copy\n", p)
-			copyPaths = append(copyPaths, p)
-		}
-		return err
-	}
-
-	err := filepath.Walk(internalGroupVars, visit)
-	if err != nil {
-		return err
-	}
-
-	if _, err := os.Stat(externalGroupVars); os.IsNotExist(err) {
-		fmt.Printf("Creating %s\n", externalGroupVars)
-		err = os.MkdirAll(externalGroupVars, 0755)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, copyPath := range copyPaths {
-		destPath := path.Join(externalGroupVars, path.Base(copyPath))
-		fmt.Printf("Copying %s to %s\n", copyPath, destPath)
-		contents, err := ioutil.ReadFile(copyPath)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(destPath, contents, 0644)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	cmd := exec.Command("rsync", "-avz", internalGroupVars, externalGroupVars)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // CopyInventories copies the inventories from the internal repo to the external
@@ -99,36 +74,17 @@ func CopyInventories(internalPath, externalPath string) error {
 	if err != nil {
 		return err
 	}
-
+	if !strings.HasSuffix(internalInventories, "/") {
+		internalInventories = fmt.Sprintf("%s/", internalInventories)
+	}
+	if !strings.HasSuffix(externalInventories, "/") {
+		externalInventories = fmt.Sprintf("%s/", externalInventories)
+	}
 	fmt.Printf("Copying files from %s to %s\n", internalInventories, externalInventories)
-	copyPaths := []string{}
-
-	visit := func(p string, i os.FileInfo, err error) error {
-		if !i.IsDir() {
-			fmt.Printf("Found file %s to copy\n", p)
-			copyPaths = append(copyPaths, p)
-		}
-		return err
-	}
-
-	err = filepath.Walk(internalInventories, visit)
-	if err != nil {
-		return err
-	}
-
-	for _, copyPath := range copyPaths {
-		destPath := path.Join(externalInventories, path.Base(copyPath))
-		fmt.Printf("Copying %s to %s\n", copyPath, destPath)
-		contents, err := ioutil.ReadFile(copyPath)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(destPath, contents, 0644)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	cmd := exec.Command("rsync", "-avz", "--exclude", "_group_vars", internalInventories, externalInventories)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // CopySecret copies the "sudo_secret file from the internal dir to the external
