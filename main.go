@@ -57,7 +57,7 @@ func CopyGroupVars(internalPath, externalPath string) error {
 		externalGroupVars = fmt.Sprintf("%s/", externalGroupVars)
 	}
 	fmt.Printf("Copying files from %s to %s\n", internalGroupVars, externalGroupVars)
-	cmd := exec.Command("rsync", "-avz", internalGroupVars, externalGroupVars)
+	cmd := exec.Command("rsync", "-avz", "-L", internalGroupVars, externalGroupVars)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -81,7 +81,7 @@ func CopyInventories(internalPath, externalPath string) error {
 		externalInventories = fmt.Sprintf("%s/", externalInventories)
 	}
 	fmt.Printf("Copying files from %s to %s\n", internalInventories, externalInventories)
-	cmd := exec.Command("rsync", "-avz", "--exclude", "_group_vars", internalInventories, externalInventories)
+	cmd := exec.Command("rsync", "-avz", "-L", internalInventories, externalInventories)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -329,9 +329,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err = CopyGroupVars(internalPath, externalPath); err != nil {
-		log.Fatal(err)
-	}
+	// if err = CopyGroupVars(internalPath, externalPath); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	if err = CopyInventories(internalPath, externalPath); err != nil {
 		log.Fatal(err)
